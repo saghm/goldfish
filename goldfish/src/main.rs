@@ -1,9 +1,13 @@
 use goldfish_core::Goldfish;
-use rustyline::{error::ReadlineError, Editor};
+use rustyline::{error::ReadlineError, Config, Editor};
 
 fn main() {
     let mut goldfish = Goldfish::new();
-    let mut prompt = Editor::<()>::new();
+
+    let config = Config::builder().auto_add_history(true).build();
+    let mut prompt = Editor::<()>::with_config(config);
+
+    let _ = prompt.load_history("goldfish_history");
 
     loop {
         let input = match prompt.readline("##> ") {
@@ -15,5 +19,7 @@ fn main() {
         if let Err(e) = goldfish.exec(&input) {
             eprintln!("Error: {}", e);
         }
+
+        let _ = prompt.save_history("goldfish_history");
     }
 }
