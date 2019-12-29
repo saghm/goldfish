@@ -1,10 +1,11 @@
 use std::collections::{HashMap, HashSet};
 
 use anyhow::{bail, Result};
+use derivative::Derivative;
 use getset::Getters;
 
 #[derive(Debug, Eq, Hash, PartialEq)]
-pub enum CardType {
+enum CardType {
     Artifact,
     Creature,
     Enchantment,
@@ -28,7 +29,7 @@ impl CardType {
 }
 
 #[derive(Debug, Getters)]
-pub struct Card {
+struct Card {
     #[get]
     types: HashSet<CardType>,
 
@@ -48,7 +49,7 @@ impl Card {
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub enum ZoneType {
+pub(crate) enum ZoneType {
     Battlefield,
     Deck,
     Exile,
@@ -56,8 +57,23 @@ pub enum ZoneType {
     Hand,
 }
 
+impl ZoneType {
+    pub(crate) fn parse(location: &str) -> Result<Self> {
+        let loc = match location {
+            "battlefield" => Self::Battlefield,
+            "deck" => Self::Deck,
+            "exile" => Self::Exile,
+            "graveyard" => Self::Graveyard,
+            "hand" => Self::Hand,
+            other => bail!("`{}` is not a known location", other),
+        };
+
+        Ok(loc)
+    }
+}
+
 #[derive(Debug, Default)]
-pub struct Zone {
+struct Zone {
     cards: Vec<Card>,
 }
 
@@ -89,19 +105,31 @@ impl Zone {
 }
 
 #[derive(Debug)]
-pub enum Specifier {
+pub(crate) enum Specifier {
     CardName(String),
     Index(usize),
 }
 
-#[derive(Debug, Getters)]
-pub struct State {
+#[derive(Derivative)]
+#[derivative(Debug, Default)]
+pub(crate) struct State {
     zones: HashMap<ZoneType, Zone>,
 }
 
 impl State {
+    pub(crate) fn new() -> Self {
+        State {
+            zones: Default::default(),
+        }
+    }
+
     /// Moves a card from one zone to another.
-    pub fn move_card(&mut self, card: &Specifier, from: ZoneType, to: ZoneType) -> Result<()> {
+    pub(crate) fn move_card(
+        &mut self,
+        card: &Specifier,
+        from: ZoneType,
+        to: ZoneType,
+    ) -> Result<()> {
         if from == to {
             return Ok(());
         }
@@ -120,12 +148,12 @@ impl State {
     }
 
     /// Draws a card.
-    pub fn draw(&mut self) -> Result<()> {
+    pub(crate) fn draw(&mut self) -> Result<()> {
         self.move_card(&Specifier::Index(0), ZoneType::Deck, ZoneType::Hand)
     }
 
     /// Draws `n` cards.
-    pub fn draw_n(&mut self, n: usize) -> Result<()> {
+    pub(crate) fn draw_n(&mut self, n: usize) -> Result<()> {
         for _ in 0..n {
             self.draw()?;
         }
@@ -133,8 +161,9 @@ impl State {
         Ok(())
     }
 
-    /// Moves a permanent from the hand to the battlefield or a spell from the hand to the graveyard.
-    pub fn play(&mut self, card: &Specifier) -> Result<()> {
+    /// Moves a permanent from the hand to the battlefield or a spell from the hand to the
+    /// graveyard.
+    pub(crate) fn play(&mut self, card: &Specifier) -> Result<()> {
         let hand = self.get_zone(ZoneType::Hand);
         let card = hand.remove_card(card)?;
 
@@ -150,12 +179,12 @@ impl State {
     }
 
     /// Discards a card.
-    pub fn discard(&mut self, card: &Specifier) -> Result<()> {
+    pub(crate) fn discard(&mut self, card: &Specifier) -> Result<()> {
         self.move_card(card, ZoneType::Hand, ZoneType::Graveyard)
     }
 
     /// Display the top `n` cards in the deck.
-    pub fn inspect(&mut self, n: usize) -> Result<()> {
+    pub(crate) fn inspect(&mut self, n: usize) -> Result<()> {
         todo!()
     }
 }
