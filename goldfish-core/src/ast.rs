@@ -13,4 +13,5 @@ pub(crate) enum Statement {
         to: ZoneType,
     },
     Play(Specifier),
+    Sacrifice(Specifier),
 }

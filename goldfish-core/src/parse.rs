@@ -35,9 +35,37 @@ impl<'a> Input<'a> {
         }
 
         match self.parts.remove(0) {
+            "discard" => self.parse_discard(),
+            "draw" => self.parse_draw(),
             "move" => self.parse_move(),
+            "play" => self.parse_play(),
+            "sac" => self.parse_sacrifice(),
             other => bail!("`{}` is not a known verb", other),
         }
+    }
+
+    fn parse_discard(self) -> Result<Statement> {
+        Ok(Statement::Discard(self.parse_specifier()?))
+    }
+
+    fn parse_draw(self) -> Result<Statement> {
+        if self.parts.is_empty() {
+            return Ok(Statement::Draw(1));
+        }
+
+        if self.parts.len() > 1 {
+            bail!("`draw` needs a single-word count");
+        }
+
+        let count = match self.parts[0].parse() {
+            Ok(count) => count,
+            Err(_) => bail!(
+                "`{}` is not a valid numeric count for `draw`",
+                self.parts[0]
+            ),
+        };
+
+        Ok(Statement::Draw(count))
     }
 
     fn parse_move(mut self) -> Result<Statement> {
@@ -55,7 +83,7 @@ impl<'a> Input<'a> {
             bail!("`move` needs a single-word destination");
         }
 
-        let from = ZoneType::parse(destination[0])?;
+        let to = ZoneType::parse(destination[0])?;
 
         // Split off everything after "from" and throw away "from".
         let source = match self.split_off_at("from") {
@@ -71,11 +99,19 @@ impl<'a> Input<'a> {
             bail!("`move` needs a single-word source");
         }
 
-        let to = ZoneType::parse(source[0])?;
+        let from = ZoneType::parse(source[0])?;
 
         let card = self.parse_specifier()?;
 
         Ok(Statement::Move { card, from, to })
+    }
+
+    fn parse_play(&self) -> Result<Statement> {
+        Ok(Statement::Play(self.parse_specifier()?))
+    }
+
+    fn parse_sacrifice(self) -> Result<Statement> {
+        Ok(Statement::Sacrifice(self.parse_specifier()?))
     }
 
     fn parse_specifier(&self) -> Result<Specifier> {

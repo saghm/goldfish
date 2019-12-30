@@ -2,7 +2,7 @@ use goldfish_core::Goldfish;
 use rustyline::{error::ReadlineError, Config, Editor};
 
 fn main() {
-    let mut goldfish = Goldfish::new();
+    let mut goldfish = Goldfish::new("test_list.txt").unwrap();
 
     let config = Config::builder().auto_add_history(true).build();
     let mut prompt = Editor::<()>::with_config(config);
@@ -10,6 +10,8 @@ fn main() {
     let _ = prompt.load_history("goldfish_history");
 
     loop {
+        goldfish.display_state();
+
         let input = match prompt.readline("##> ") {
             Ok(line) => line,
             Err(ReadlineError::Interrupted) | Err(ReadlineError::Eof) => break,
