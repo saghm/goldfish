@@ -35,6 +35,7 @@ impl Goldfish {
 
             Statement::Discard(card) => self.state.discard(&card),
             Statement::Draw(count) => self.state.draw_n(count),
+            Statement::Fetch(card_name) => self.state.fetch(&card_name),
             Statement::Inspect(count) => self.state.inspect(count),
             Statement::Move { card, from, to } => self.state.move_card(&card, from, to),
             Statement::Play(card) => self.state.play(&card),

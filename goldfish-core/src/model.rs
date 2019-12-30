@@ -250,12 +250,24 @@ impl State {
         Ok(())
     }
 
+    pub(crate) fn fetch(&mut self, card: &str) -> Result<()> {
+        let card = self
+            .get_zone(ZoneType::Deck)
+            .remove_card(&Specifier::CardName(card.into()))?;
+
+        self.play_card(card)
+    }
+
     /// Moves a permanent from the hand to the battlefield or a spell from the hand to the
     /// graveyard.
     pub(crate) fn play(&mut self, card: &Specifier) -> Result<()> {
         let hand = self.get_zone(ZoneType::Hand);
         let card = hand.remove_card(card)?;
 
+        self.play_card(card)
+    }
+
+    fn play_card(&mut self, card: Card) -> Result<()> {
         if card.is_permanent() {
             let battlefield = self.get_zone(ZoneType::Battlefield);
             battlefield.cards.push(card);

@@ -6,6 +6,7 @@ pub(crate) enum Statement {
 
     Discard(Specifier),
     Draw(usize),
+    Fetch(String),
     Inspect(usize),
     Move {
         card: Specifier,

@@ -34,14 +34,17 @@ impl<'a> Input<'a> {
             return Ok(Statement::Nop);
         }
 
-        match self.parts.remove(0) {
-            "discard" => self.parse_discard(),
-            "draw" => self.parse_draw(),
-            "move" => self.parse_move(),
-            "play" => self.parse_play(),
-            "sac" => self.parse_sacrifice(),
+        let statement = match self.parts.remove(0) {
+            "discard" => self.parse_discard()?,
+            "draw" => self.parse_draw()?,
+            "fetch" => self.parse_fetch(),
+            "move" => self.parse_move()?,
+            "play" => self.parse_play()?,
+            "sac" => self.parse_sacrifice()?,
             other => bail!("`{}` is not a known verb", other),
-        }
+        };
+
+        Ok(statement)
     }
 
     fn parse_discard(self) -> Result<Statement> {
@@ -66,6 +69,10 @@ impl<'a> Input<'a> {
         };
 
         Ok(Statement::Draw(count))
+    }
+
+    fn parse_fetch(self) -> Statement {
+        Statement::Fetch(self.parts.join(" "))
     }
 
     fn parse_move(mut self) -> Result<Statement> {
