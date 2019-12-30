@@ -241,7 +241,7 @@ impl State {
             if i == 0 {
                 write!(fmt, "    {}: ", line_name)?;
             } else {
-                write!(fmt, ", ")?;
+                write!(fmt, "; ")?;
             }
 
             write!(fmt, "{}", card.name())?;
@@ -273,7 +273,7 @@ impl State {
 
         for card in hand {
             if !first {
-                write!(fmt, ", ")?;
+                write!(fmt, "; ")?;
             }
 
             write!(fmt, "{}", card.name())?;
