@@ -1,109 +1,17 @@
+mod card;
+
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     fmt,
     fs::File,
     io::{BufRead, BufReader},
 };
 
 use anyhow::{bail, Result};
-use derivative::Derivative;
-use getset::Getters;
 use rand::seq::SliceRandom;
 
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-enum CardType {
-    Artifact,
-    Creature,
-    Enchantment,
-    Instant,
-    Land,
-    Planeswalker,
-    Sorcery,
-}
-
-impl CardType {
-    fn parse(s: &str) -> Result<Self> {
-        // TODO: Be smarter about case.
-
-        let card_type = match s {
-            "artifact" => Self::Artifact,
-            "creature" => Self::Creature,
-            "enchantment" => Self::Enchantment,
-            "instant" => Self::Instant,
-            "land" => Self::Land,
-            "planeswalker" => Self::Planeswalker,
-            "sorcery" => Self::Sorcery,
-            other => bail!("invalid card type: {}", s),
-        };
-
-        Ok(card_type)
-    }
-
-    fn is_permanent(&self) -> bool {
-        match self {
-            CardType::Artifact
-            | CardType::Creature
-            | CardType::Enchantment
-            | CardType::Land
-            | CardType::Planeswalker => true,
-            CardType::Instant | CardType::Sorcery => false,
-        }
-    }
-}
-
-#[derive(Debug, Getters)]
-struct Card {
-    #[get]
-    types: HashSet<CardType>,
-
-    #[get]
-    name: String,
-}
-
-impl Card {
-    fn is_named(&self, name: &str) -> bool {
-        // TODO: Be smarter about case and spacing.
-        self.name == name
-    }
-
-    fn is_permanent(&self) -> bool {
-        self.types.iter().any(|card_type| card_type.is_permanent())
-    }
-}
-
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub(crate) enum ZoneType {
-    Battlefield,
-    Deck,
-    Exile,
-    Graveyard,
-    Hand,
-}
-
-impl ZoneType {
-    fn name(&self) -> &str {
-        match self {
-            ZoneType::Battlefield => "battlefield",
-            ZoneType::Deck => "deck",
-            ZoneType::Exile => "exile",
-            ZoneType::Graveyard => "graveyard",
-            ZoneType::Hand => "hand",
-        }
-    }
-
-    pub(crate) fn parse(location: &str) -> Result<Self> {
-        let loc = match location {
-            "battlefield" => Self::Battlefield,
-            "deck" => Self::Deck,
-            "exile" => Self::Exile,
-            "graveyard" => Self::Graveyard,
-            "hand" => Self::Hand,
-            other => bail!("`{}` is not a known location", other),
-        };
-
-        Ok(loc)
-    }
-}
+use self::card::{Card, CardType};
+use crate::common::{Specifier, ZoneType};
 
 #[derive(Debug, Default)]
 struct Zone {
@@ -120,7 +28,7 @@ impl Zone {
 
     fn remove_card_by_name(&mut self, name: &str) -> Result<Card> {
         for i in 0..self.cards.len() {
-            if self.cards[i].name == name {
+            if self.cards[i].is_named(name) {
                 return Ok(self.cards.remove(i));
             }
         }
@@ -137,14 +45,7 @@ impl Zone {
     }
 }
 
-#[derive(Debug)]
-pub(crate) enum Specifier {
-    CardName(String),
-    Index(usize),
-}
-
-#[derive(Derivative)]
-#[derivative(Debug, Default)]
+#[derive(Debug, Default)]
 pub(crate) struct State {
     zones: HashMap<ZoneType, Zone>,
 }
@@ -176,10 +77,7 @@ impl State {
                 .map(|s| CardType::parse(s.trim()))
                 .collect();
 
-            let card = Card {
-                name: parts[0].to_string(),
-                types: types?,
-            };
+            let card = Card::new(parts[0], types?);
 
             cards.push(card);
         }
@@ -190,26 +88,49 @@ impl State {
         Ok(Self { zones })
     }
 
-    /// Moves all cards back to the deck, shuffles the deck, and draws seven cards.
-    pub(crate) fn start_new_game(&mut self) -> Result<()> {
-        let mut cards = Vec::new();
+    fn get_zone(&mut self, zone_type: ZoneType) -> &mut Zone {
+        self.zones.entry(zone_type).or_insert_with(Default::default)
+    }
 
-        for zone in self.zones.values_mut() {
-            cards.append(&mut zone.cards);
+    fn play_card(&mut self, card: Card) -> Result<()> {
+        if card.is_permanent() {
+            let battlefield = self.get_zone(ZoneType::Battlefield);
+            battlefield.cards.push(card);
+        } else {
+            let graveyard = self.get_zone(ZoneType::Graveyard);
+            graveyard.cards.push(card);
         }
-
-        self.get_zone(ZoneType::Deck).cards.extend(cards);
-        self.shuffle();
-        self.draw_n(7)?;
 
         Ok(())
     }
 
-    /// Randomizes the order of the cards in the deck.
-    pub(crate) fn shuffle(&mut self) {
-        self.get_zone(ZoneType::Deck)
-            .cards
-            .shuffle(&mut rand::thread_rng());
+    /// Discards a card.
+    pub(crate) fn discard(&mut self, card: &Specifier) -> Result<()> {
+        self.move_card(card, ZoneType::Hand, ZoneType::Graveyard)
+    }
+
+    /// Draws a card.
+    pub(crate) fn draw(&mut self) -> Result<()> {
+        self.move_card(&Specifier::Index(0), ZoneType::Deck, ZoneType::Hand)
+    }
+
+    /// Draws `n` cards.
+    pub(crate) fn draw_n(&mut self, n: usize) -> Result<()> {
+        for _ in 0..n {
+            self.draw()?;
+        }
+
+        Ok(())
+    }
+
+    /// Plays a card from the deck. For permanents, this will move the card from the deck to the
+    /// battlefield. For non-permanents, this will move the card from the deck to the graveyard.
+    pub(crate) fn fetch(&mut self, card: &str) -> Result<()> {
+        let card = self
+            .get_zone(ZoneType::Deck)
+            .remove_card(&Specifier::CardName(card.into()))?;
+
+        self.play_card(card)
     }
 
     /// Moves a card from one zone to another.
@@ -232,32 +153,6 @@ impl State {
         Ok(())
     }
 
-    fn get_zone(&mut self, zone_type: ZoneType) -> &mut Zone {
-        self.zones.entry(zone_type).or_insert_with(Default::default)
-    }
-
-    /// Draws a card.
-    pub(crate) fn draw(&mut self) -> Result<()> {
-        self.move_card(&Specifier::Index(0), ZoneType::Deck, ZoneType::Hand)
-    }
-
-    /// Draws `n` cards.
-    pub(crate) fn draw_n(&mut self, n: usize) -> Result<()> {
-        for _ in 0..n {
-            self.draw()?;
-        }
-
-        Ok(())
-    }
-
-    pub(crate) fn fetch(&mut self, card: &str) -> Result<()> {
-        let card = self
-            .get_zone(ZoneType::Deck)
-            .remove_card(&Specifier::CardName(card.into()))?;
-
-        self.play_card(card)
-    }
-
     /// Moves a permanent from the hand to the battlefield or a spell from the hand to the
     /// graveyard.
     pub(crate) fn play(&mut self, card: &Specifier) -> Result<()> {
@@ -267,21 +162,26 @@ impl State {
         self.play_card(card)
     }
 
-    fn play_card(&mut self, card: Card) -> Result<()> {
-        if card.is_permanent() {
-            let battlefield = self.get_zone(ZoneType::Battlefield);
-            battlefield.cards.push(card);
-        } else {
-            let graveyard = self.get_zone(ZoneType::Graveyard);
-            graveyard.cards.push(card);
-        }
-
-        Ok(())
+    /// Randomizes the order of the cards in the deck.
+    pub(crate) fn shuffle(&mut self) {
+        self.get_zone(ZoneType::Deck)
+            .cards
+            .shuffle(&mut rand::thread_rng());
     }
 
-    /// Discards a card.
-    pub(crate) fn discard(&mut self, card: &Specifier) -> Result<()> {
-        self.move_card(card, ZoneType::Hand, ZoneType::Graveyard)
+    /// Moves all cards back to the deck, shuffles the deck, and draws seven cards.
+    pub(crate) fn start_new_game(&mut self) -> Result<()> {
+        let mut cards = Vec::new();
+
+        for zone in self.zones.values_mut() {
+            cards.append(&mut zone.cards);
+        }
+
+        self.get_zone(ZoneType::Deck).cards.extend(cards);
+        self.shuffle();
+        self.draw_n(7)?;
+
+        Ok(())
     }
 
     /// Display the top `n` cards in the deck.
@@ -289,6 +189,7 @@ impl State {
         todo!()
     }
 
+    /// Moves a card from the battlefield to the graveyard.
     pub(crate) fn sacrifice(&mut self, card: &Specifier) -> Result<()> {
         self.move_card(card, ZoneType::Battlefield, ZoneType::Graveyard)
     }
@@ -330,7 +231,7 @@ impl State {
             .filter(|card| {
                 card_types
                     .iter()
-                    .any(|card_type| card.types.contains(&card_type))
+                    .any(|card_type| card.types().contains(&card_type))
             })
             .enumerate();
 
@@ -343,7 +244,7 @@ impl State {
                 write!(fmt, ", ")?;
             }
 
-            write!(fmt, "{}", card.name)?;
+            write!(fmt, "{}", card.name())?;
             found = true;
         }
 
@@ -375,7 +276,7 @@ impl State {
                 write!(fmt, ", ")?;
             }
 
-            write!(fmt, "{}", card.name)?;
+            write!(fmt, "{}", card.name())?;
             first = false;
         }
 

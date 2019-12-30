@@ -1,14 +1,14 @@
 #![allow(dead_code, unused_variables)]
 
-mod ast;
-mod model;
+mod common;
 mod parse;
+mod state;
 
 use anyhow::Result;
 
-use ast::Statement;
-use model::State;
+use common::Statement;
 use parse::Input;
+use state::State;
 
 #[derive(Debug, Default)]
 pub struct Goldfish {

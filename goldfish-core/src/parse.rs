@@ -1,9 +1,6 @@
 use anyhow::{bail, Result};
 
-use crate::{
-    ast::Statement,
-    model::{Specifier, ZoneType},
-};
+use crate::common::{Specifier, Statement, ZoneType};
 
 pub(crate) struct Input<'a> {
     parts: Vec<&'a str>,
