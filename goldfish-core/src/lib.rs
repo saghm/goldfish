@@ -46,6 +46,7 @@ impl Goldfish {
         println!("    `draw [n]`                         - draw cards (default: 1)");
         println!("    `fetch <card name | $index>`       - play card from library");
         println!("    `help`                             - print this help message");
+        println!("    `inspect [n]`                      - print top cards of deck (default: 1)");
         println!("    `load <file>`                      - load a new deck from the file");
         println!("    `move <card name | $index>         - move a card between locations");
         println!("       from <location> to <location>`  ");
@@ -56,6 +57,7 @@ impl Goldfish {
         println!("    `restart`                          - restart the game");
         println!("    `sac <card name | $index>`         - move a card from battlefield to");
         println!("                                         graveyard");
+        println!("    `shuffle`                          - shuffle the deck");
         println!("    `tutor <card name | $index>`       - move a card from the deck to hand");
     }
 
@@ -76,7 +78,7 @@ impl Goldfish {
             Statement::Discard(card) => self.state.discard(&card)?,
             Statement::Draw(count) => self.state.draw_n(count)?,
             Statement::Fetch(card_name) => self.state.fetch(&card_name)?,
-            Statement::Inspect(count) => self.state.inspect(count)?,
+            Statement::Inspect(count) => self.state.inspect(count),
             Statement::Load(file) => self.load(&file)?,
             Statement::Move { card, from, to } => self.state.move_card(&card, from, to)?,
             Statement::Play(card) => self.state.play(&card)?,
@@ -85,6 +87,7 @@ impl Goldfish {
             }
             Statement::Restart => self.state.start_new_game()?,
             Statement::Sacrifice(card) => self.state.sacrifice(&card)?,
+            Statement::Shuffle => self.state.shuffle(),
             Statement::Tutor(card) => self.state.tutor(&card)?,
         };
 

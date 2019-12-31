@@ -20,6 +20,7 @@ pub(crate) enum Statement {
     Print,
     Restart,
     Sacrifice(Specifier),
+    Shuffle,
     Tutor(String),
 }
 

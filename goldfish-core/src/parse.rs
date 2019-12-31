@@ -37,12 +37,14 @@ impl<'a> Input<'a> {
             "draw" => self.parse_draw()?,
             "fetch" => self.parse_fetch(),
             "help" => self.parse_help()?,
+            "inspect" => self.parse_inspect()?,
             "load" => self.parse_load(),
             "move" => self.parse_move()?,
             "play" => self.parse_play()?,
             "print" => self.parse_print()?,
             "restart" => self.parse_restart()?,
             "sac" => self.parse_sacrifice()?,
+            "shuffle" => self.parse_shuffle()?,
             "tutor" => self.parse_tutor(),
             other => bail!("`{}` is not a known verb", other),
         };
@@ -88,6 +90,26 @@ impl<'a> Input<'a> {
         }
 
         Ok(Statement::Help)
+    }
+
+    fn parse_inspect(self) -> Result<Statement> {
+        if self.parts.is_empty() {
+            return Ok(Statement::Inspect(1));
+        }
+
+        if self.parts.len() > 1 {
+            bail!("`inspect` needs a single-word count");
+        }
+
+        let count = match self.parts[0].parse() {
+            Ok(count) => count,
+            Err(_) => bail!(
+                "`{}` is not a valid numeric count for `inspect`",
+                self.parts[0]
+            ),
+        };
+
+        Ok(Statement::Inspect(count))
     }
 
     fn parse_load(self) -> Statement {
@@ -154,6 +176,14 @@ impl<'a> Input<'a> {
 
     fn parse_sacrifice(self) -> Result<Statement> {
         Ok(Statement::Sacrifice(self.parse_specifier()?))
+    }
+
+    fn parse_shuffle(&self) -> Result<Statement> {
+        if !self.parts.is_empty() {
+            bail!("`shuffle` shouldn't have any words following it");
+        }
+
+        Ok(Statement::Shuffle)
     }
 
     fn parse_tutor(self) -> Statement {

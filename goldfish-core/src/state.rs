@@ -198,8 +198,27 @@ impl State {
     }
 
     /// Display the top `n` cards in the deck.
-    pub(crate) fn inspect(&mut self, n: usize) -> Result<()> {
-        todo!()
+    pub(crate) fn inspect(&mut self, n: usize) {
+        let deck = self.get_zone(ZoneType::Deck);
+
+        if n == 0 {
+            return;
+        }
+
+        if deck.cards.is_empty() {
+            println!("no cards in deck");
+            return;
+        }
+
+        println!("cards on top of deck:");
+
+        for i in 0..std::cmp::min(n, deck.cards.len()) {
+            println!("    {}) {}", i, deck.cards[i].name());
+        }
+
+        if !deck.cards.is_empty() {
+            println!();
+        }
     }
 
     /// Moves a card from the battlefield to the graveyard.
