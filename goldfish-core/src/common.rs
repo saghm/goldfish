@@ -9,12 +9,14 @@ pub(crate) enum Statement {
     Draw(usize),
     Fetch(String),
     Inspect(usize),
+    Load(String),
     Move {
         card: Specifier,
         from: ZoneType,
         to: ZoneType,
     },
     Play(Specifier),
+    Restart,
     Sacrifice(Specifier),
     Tutor(String),
 }

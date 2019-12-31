@@ -36,8 +36,10 @@ impl<'a> Input<'a> {
             "discard" => self.parse_discard()?,
             "draw" => self.parse_draw()?,
             "fetch" => self.parse_fetch(),
+            "load" => self.parse_load(),
             "move" => self.parse_move()?,
             "play" => self.parse_play()?,
+            "restart" => self.parse_restart()?,
             "sac" => self.parse_sacrifice()?,
             "tutor" => self.parse_tutor(),
             other => bail!("`{}` is not a known verb", other),
@@ -76,6 +78,10 @@ impl<'a> Input<'a> {
 
     fn parse_fetch(self) -> Statement {
         Statement::Fetch(self.parts.join(" "))
+    }
+
+    fn parse_load(self) -> Statement {
+        Statement::Load(self.parts.join(" "))
     }
 
     fn parse_move(mut self) -> Result<Statement> {
@@ -118,6 +124,14 @@ impl<'a> Input<'a> {
 
     fn parse_play(&self) -> Result<Statement> {
         Ok(Statement::Play(self.parse_specifier()?))
+    }
+
+    fn parse_restart(&self) -> Result<Statement> {
+        if !self.parts.is_empty() {
+            bail!("`restart` shouldn't have any words following it");
+        }
+
+        Ok(Statement::Restart)
     }
 
     fn parse_sacrifice(self) -> Result<Statement> {
