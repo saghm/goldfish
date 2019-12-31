@@ -23,8 +23,8 @@ impl Goldfish {
         Ok(Self { state })
     }
 
-    pub fn display_state(&self) {
-        println!("{}", self.state);
+    pub fn print_state(&mut self) {
+        self.state.print();
     }
 
     pub fn exec(&mut self, command: &str) -> Result<()> {
@@ -33,6 +33,7 @@ impl Goldfish {
         match statement {
             Statement::Nop => Ok(()),
 
+            Statement::Bounce(card) => self.state.bounce(&card),
             Statement::Discard(card) => self.state.discard(&card),
             Statement::Draw(count) => self.state.draw_n(count),
             Statement::Fetch(card_name) => self.state.fetch(&card_name),
@@ -40,6 +41,7 @@ impl Goldfish {
             Statement::Move { card, from, to } => self.state.move_card(&card, from, to),
             Statement::Play(card) => self.state.play(&card),
             Statement::Sacrifice(card) => self.state.sacrifice(&card),
+            Statement::Tutor(card) => self.state.tutor(&card),
         }
     }
 }

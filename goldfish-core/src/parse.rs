@@ -32,16 +32,22 @@ impl<'a> Input<'a> {
         }
 
         let statement = match self.parts.remove(0) {
+            "bounce" => self.parse_bounce()?,
             "discard" => self.parse_discard()?,
             "draw" => self.parse_draw()?,
             "fetch" => self.parse_fetch(),
             "move" => self.parse_move()?,
             "play" => self.parse_play()?,
             "sac" => self.parse_sacrifice()?,
+            "tutor" => self.parse_tutor(),
             other => bail!("`{}` is not a known verb", other),
         };
 
         Ok(statement)
+    }
+
+    fn parse_bounce(self) -> Result<Statement> {
+        Ok(Statement::Bounce(self.parse_specifier()?))
     }
 
     fn parse_discard(self) -> Result<Statement> {
@@ -116,6 +122,10 @@ impl<'a> Input<'a> {
 
     fn parse_sacrifice(self) -> Result<Statement> {
         Ok(Statement::Sacrifice(self.parse_specifier()?))
+    }
+
+    fn parse_tutor(self) -> Statement {
+        Statement::Tutor(self.parts.join(" "))
     }
 
     fn parse_specifier(&self) -> Result<Specifier> {

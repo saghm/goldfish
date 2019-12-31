@@ -16,9 +16,7 @@ pub(super) enum CardType {
 
 impl CardType {
     pub(super) fn parse(s: &str) -> Result<Self> {
-        // TODO: Be smarter about case.
-
-        let card_type = match s {
+        let card_type = match s.trim().to_lowercase().as_str() {
             "artifact" => Self::Artifact,
             "creature" => Self::Creature,
             "enchantment" => Self::Enchantment,
@@ -62,8 +60,7 @@ impl Card {
     }
 
     pub(super) fn is_named(&self, name: &str) -> bool {
-        // TODO: Be smarter about case and spacing.
-        self.name == name
+        self.name.trim().to_lowercase() == name.trim().to_lowercase()
     }
 
     pub(super) fn is_permanent(&self) -> bool {

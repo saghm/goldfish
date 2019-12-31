@@ -10,7 +10,7 @@ fn main() {
     let _ = prompt.load_history("goldfish_history");
 
     loop {
-        goldfish.display_state();
+        goldfish.print_state();
 
         let input = match prompt.readline("##> ") {
             Ok(line) => line,

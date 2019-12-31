@@ -4,6 +4,7 @@ use anyhow::{bail, Result};
 pub(crate) enum Statement {
     Nop,
 
+    Bounce(Specifier),
     Discard(Specifier),
     Draw(usize),
     Fetch(String),
@@ -15,6 +16,7 @@ pub(crate) enum Statement {
     },
     Play(Specifier),
     Sacrifice(Specifier),
+    Tutor(String),
 }
 
 #[derive(Debug)]
