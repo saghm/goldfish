@@ -36,9 +36,11 @@ impl<'a> Input<'a> {
             "discard" => self.parse_discard()?,
             "draw" => self.parse_draw()?,
             "fetch" => self.parse_fetch(),
+            "help" => self.parse_help()?,
             "load" => self.parse_load(),
             "move" => self.parse_move()?,
             "play" => self.parse_play()?,
+            "print" => self.parse_print()?,
             "restart" => self.parse_restart()?,
             "sac" => self.parse_sacrifice()?,
             "tutor" => self.parse_tutor(),
@@ -78,6 +80,14 @@ impl<'a> Input<'a> {
 
     fn parse_fetch(self) -> Statement {
         Statement::Fetch(self.parts.join(" "))
+    }
+
+    fn parse_help(&self) -> Result<Statement> {
+        if !self.parts.is_empty() {
+            bail!("`help` shouldn't have any words following it");
+        }
+
+        Ok(Statement::Help)
     }
 
     fn parse_load(self) -> Statement {
@@ -124,6 +134,14 @@ impl<'a> Input<'a> {
 
     fn parse_play(&self) -> Result<Statement> {
         Ok(Statement::Play(self.parse_specifier()?))
+    }
+
+    fn parse_print(&self) -> Result<Statement> {
+        if !self.parts.is_empty() {
+            bail!("`print` shouldn't have any words following it");
+        }
+
+        Ok(Statement::Print)
     }
 
     fn parse_restart(&self) -> Result<Statement> {

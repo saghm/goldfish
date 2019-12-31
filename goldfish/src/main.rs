@@ -44,8 +44,12 @@ fn main() {
         );
     }
 
+    let mut skip_state = false;
+
     loop {
-        goldfish.print_state();
+        if !skip_state {
+            goldfish.print_state();
+        }
 
         let input = match prompt.readline("##> ") {
             Ok(line) => line,
@@ -53,8 +57,13 @@ fn main() {
             Err(e) => panic!("{}", e),
         };
 
-        if let Err(e) = goldfish.exec(&input) {
+        let error = goldfish.exec(&input);
+        skip_state =
+            error.is_err() || error.as_ref().ok() == Some(&false) || input.trim().is_empty();
+
+        if let Err(e) = error {
             eprintln!("Error: {}", e);
+            eprintln!("run `help` for info on commands");
         }
 
         if let Some(Err(_)) = history_file.as_ref().map(|file| prompt.save_history(file)) {

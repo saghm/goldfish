@@ -8,6 +8,7 @@ pub(crate) enum Statement {
     Discard(Specifier),
     Draw(usize),
     Fetch(String),
+    Help,
     Inspect(usize),
     Load(String),
     Move {
@@ -16,6 +17,7 @@ pub(crate) enum Statement {
         to: ZoneType,
     },
     Play(Specifier),
+    Print,
     Restart,
     Sacrifice(Specifier),
     Tutor(String),
