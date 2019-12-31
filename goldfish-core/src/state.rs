@@ -146,7 +146,7 @@ impl State {
         from: ZoneType,
         to: ZoneType,
     ) -> Result<()> {
-        if from == to {
+        if from == to && to != ZoneType::Deck {
             return Ok(());
         }
 
