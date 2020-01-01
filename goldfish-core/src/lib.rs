@@ -44,6 +44,8 @@ impl Goldfish {
         println!("    `bounce <card name | $index>`      - move card from battlefield to hand");
         println!("    `discard <card name | $index>`     - move card from hand to graveyard");
         println!("    `draw [n]`                         - draw cards (default: 1)");
+        println!("    `exile <card name | $index>        - move a card to exile");
+        println!("       from <location>`");
         println!("    `fetch <card name | $index>`       - play card from library");
         println!("    `help`                             - print this help message");
         println!("    `inspect [n]`                      - print top cards of deck (default: 1)");
@@ -58,6 +60,8 @@ impl Goldfish {
         println!("    `sac <card name | $index>`         - move a card from battlefield to");
         println!("                                         graveyard");
         println!("    `shuffle`                          - shuffle the deck");
+        println!("    `tuck <card name | $index>         - move a card to bottom of deck");
+        println!("       from <location>`");
         println!("    `tutor <card name | $index>`       - move a card from the deck to hand");
     }
 
@@ -77,6 +81,7 @@ impl Goldfish {
             Statement::Bounce(card) => self.state.bounce(&card)?,
             Statement::Discard(card) => self.state.discard(&card)?,
             Statement::Draw(count) => self.state.draw_n(count)?,
+            Statement::Exile { card, from } => self.state.exile(&card, from)?,
             Statement::Fetch(card_name) => self.state.fetch(&card_name)?,
             Statement::Inspect(count) => self.state.inspect(count),
             Statement::Load(file) => self.load(&file)?,
@@ -88,6 +93,7 @@ impl Goldfish {
             Statement::Restart => self.state.start_new_game()?,
             Statement::Sacrifice(card) => self.state.sacrifice(&card)?,
             Statement::Shuffle => self.state.shuffle(),
+            Statement::Tuck { card, from } => self.state.tuck(&card, from)?,
             Statement::Tutor(card) => self.state.tutor(&card)?,
         };
 

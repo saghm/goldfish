@@ -35,6 +35,7 @@ impl<'a> Input<'a> {
             "bounce" => self.parse_bounce()?,
             "discard" => self.parse_discard()?,
             "draw" => self.parse_draw()?,
+            "exile" => self.parse_exile()?,
             "fetch" => self.parse_fetch(),
             "help" => self.parse_help()?,
             "inspect" => self.parse_inspect()?,
@@ -45,6 +46,7 @@ impl<'a> Input<'a> {
             "restart" => self.parse_restart()?,
             "sac" => self.parse_sacrifice()?,
             "shuffle" => self.parse_shuffle()?,
+            "tuck" => self.parse_tuck()?,
             "tutor" => self.parse_tutor(),
             other => bail!("`{}` is not a known verb", other),
         };
@@ -78,6 +80,28 @@ impl<'a> Input<'a> {
         };
 
         Ok(Statement::Draw(count))
+    }
+
+    fn parse_exile(mut self) -> Result<Statement> {
+        // Split off everything after "from" and throw away "from".
+        let source = match self.split_off_at("from") {
+            Some(rest) => rest,
+            None => bail!("`exile` needs to specify source with `from`"),
+        };
+
+        if source.is_empty() {
+            bail!("`exile` needs source after `from`");
+        }
+
+        if source.len() > 1 {
+            bail!("`exile` needs a single-word source");
+        }
+
+        let from = ZoneType::parse(source[0])?;
+
+        let card = self.parse_specifier()?;
+
+        Ok(Statement::Exile { card, from })
     }
 
     fn parse_fetch(self) -> Statement {
@@ -184,6 +208,28 @@ impl<'a> Input<'a> {
         }
 
         Ok(Statement::Shuffle)
+    }
+
+    fn parse_tuck(mut self) -> Result<Statement> {
+        // Split off everything after "from" and throw away "from".
+        let source = match self.split_off_at("from") {
+            Some(rest) => rest,
+            None => bail!("`tuck` needs to specify source with `from`"),
+        };
+
+        if source.is_empty() {
+            bail!("`tuck` needs source after `from`");
+        }
+
+        if source.len() > 1 {
+            bail!("`tuck` needs a single-word source");
+        }
+
+        let from = ZoneType::parse(source[0])?;
+
+        let card = self.parse_specifier()?;
+
+        Ok(Statement::Tuck { card, from })
     }
 
     fn parse_tutor(self) -> Statement {

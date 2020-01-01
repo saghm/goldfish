@@ -126,6 +126,10 @@ impl State {
         Ok(())
     }
 
+    pub(crate) fn exile(&mut self, card: &Specifier, from: ZoneType) -> Result<()> {
+        self.move_card(card, from, ZoneType::Exile)
+    }
+
     /// Plays a card from the deck. For permanents, this will move the card from the deck to the
     /// battlefield. For non-permanents, this will move the card from the deck to the graveyard.
     pub(crate) fn fetch(&mut self, card: &str) -> Result<()> {
@@ -146,6 +150,7 @@ impl State {
         from: ZoneType,
         to: ZoneType,
     ) -> Result<()> {
+        // Allow cards to be moved from the deck to iself, since tucking is useful.
         if from == to && to != ZoneType::Deck {
             return Ok(());
         }
@@ -242,6 +247,10 @@ impl State {
                 2
             }
         });
+    }
+
+    pub(crate) fn tuck(&mut self, card: &Specifier, from: ZoneType) -> Result<()> {
+        self.move_card(card, from, ZoneType::Deck)
     }
 
     pub(crate) fn tutor(&mut self, card: &str) -> Result<()> {

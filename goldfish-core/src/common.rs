@@ -7,6 +7,10 @@ pub(crate) enum Statement {
     Bounce(Specifier),
     Discard(Specifier),
     Draw(usize),
+    Exile {
+        card: Specifier,
+        from: ZoneType,
+    },
     Fetch(String),
     Help,
     Inspect(usize),
@@ -21,6 +25,10 @@ pub(crate) enum Statement {
     Restart,
     Sacrifice(Specifier),
     Shuffle,
+    Tuck {
+        card: Specifier,
+        from: ZoneType,
+    },
     Tutor(String),
 }
 
