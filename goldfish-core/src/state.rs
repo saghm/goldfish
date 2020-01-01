@@ -10,7 +10,7 @@ use anyhow::{bail, Result};
 use rand::seq::SliceRandom;
 
 use self::card::{Card, CardType};
-use crate::common::{Specifier, ZoneType};
+use crate::common::{PrintTarget, Specifier, ZoneType};
 
 #[derive(Debug, Default)]
 struct Zone {
@@ -212,6 +212,7 @@ impl State {
 
         if deck.cards.is_empty() {
             println!("no cards in deck");
+            println!();
             return;
         }
 
@@ -221,9 +222,7 @@ impl State {
             println!("    {}) {}", i, deck.cards[i].name());
         }
 
-        if !deck.cards.is_empty() {
-            println!();
-        }
+        println!();
     }
 
     /// Moves a card from the battlefield to the graveyard.
@@ -264,7 +263,30 @@ impl State {
         Ok(())
     }
 
-    pub(crate) fn print(&mut self) {
+    pub(crate) fn print(&mut self, target: PrintTarget) {
+        let location = match target.as_zone_type() {
+            Some(loc) => loc,
+            None => return,
+        };
+
+        let zone = self.get_zone(location);
+
+        if zone.cards.is_empty() {
+            println!("no cards in {}", location.name());
+            println!();
+            return;
+        }
+
+        println!("cards in {}:", location.name());
+
+        for i in 0..zone.cards.len() {
+            println!("    {}) {}", i, zone.cards[i].name());
+        }
+
+        println!();
+    }
+
+    pub(crate) fn print_game_state(&mut self) {
         println!("battlefield:");
         self.print_battlefield();
         self.print_hand();

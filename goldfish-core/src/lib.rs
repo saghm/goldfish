@@ -1,5 +1,3 @@
-#![allow(dead_code, unused_variables)]
-
 mod common;
 mod parse;
 mod state;
@@ -36,7 +34,7 @@ impl Goldfish {
     }
 
     pub fn print_state(&mut self) {
-        self.state.print();
+        self.state.print_game_state();
     }
 
     pub fn print_help(&self) {
@@ -54,6 +52,7 @@ impl Goldfish {
         println!("       from <location> to <location>`  ");
         println!("    `play <card name | $index>`        - move a permanent from the hand to");
         println!("    `print`                            - print the current state of the game");
+        println!("    `print <graveyard | exile>`        - print cards in graveyard or exile");
         println!("                                         battlefield or a spell from hand");
         println!("                                         graveyard");
         println!("    `restart`                          - restart the game");
@@ -87,9 +86,7 @@ impl Goldfish {
             Statement::Load(file) => self.load(&file)?,
             Statement::Move { card, from, to } => self.state.move_card(&card, from, to)?,
             Statement::Play(card) => self.state.play(&card)?,
-            Statement::Print => {
-                // `print_state` is already true, so we do nothing.
-            }
+            Statement::Print(target) => self.state.print(target),
             Statement::Restart => self.state.start_new_game()?,
             Statement::Sacrifice(card) => self.state.sacrifice(&card)?,
             Statement::Shuffle => self.state.shuffle(),

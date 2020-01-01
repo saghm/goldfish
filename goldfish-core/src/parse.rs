@@ -1,6 +1,6 @@
 use anyhow::{bail, Result};
 
-use crate::common::{Specifier, Statement, ZoneType};
+use crate::common::{PrintTarget, Specifier, Statement, ZoneType};
 
 pub(crate) struct Input<'a> {
     parts: Vec<&'a str>,
@@ -183,11 +183,17 @@ impl<'a> Input<'a> {
     }
 
     fn parse_print(&self) -> Result<Statement> {
-        if !self.parts.is_empty() {
-            bail!("`print` shouldn't have any words following it");
+        if self.parts.is_empty() {
+            return Ok(Statement::Print(PrintTarget::Default));
         }
 
-        Ok(Statement::Print)
+        if self.parts.len() > 1 {
+            bail!("`print` either needs no target or a one-word target");
+        }
+
+        let target = PrintTarget::parse(self.parts[0])?;
+
+        Ok(Statement::Print(target))
     }
 
     fn parse_restart(&self) -> Result<Statement> {

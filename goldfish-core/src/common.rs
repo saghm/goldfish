@@ -21,7 +21,7 @@ pub(crate) enum Statement {
         to: ZoneType,
     },
     Play(Specifier),
-    Print,
+    Print(PrintTarget),
     Restart,
     Sacrifice(Specifier),
     Shuffle,
@@ -30,6 +30,33 @@ pub(crate) enum Statement {
         from: ZoneType,
     },
     Tutor(String),
+}
+
+#[derive(Debug)]
+pub(crate) enum PrintTarget {
+    Default,
+    Exile,
+    Graveyard,
+}
+
+impl PrintTarget {
+    pub(crate) fn as_zone_type(&self) -> Option<ZoneType> {
+        match self {
+            Self::Default => None,
+            Self::Exile => Some(ZoneType::Exile),
+            Self::Graveyard => Some(ZoneType::Graveyard),
+        }
+    }
+
+    pub(crate) fn parse(location: &str) -> Result<Self> {
+        let loc = match location {
+            "exile" => Self::Exile,
+            "graveyard" => Self::Graveyard,
+            other => bail!("`{}` is not a known location", other),
+        };
+
+        Ok(loc)
+    }
 }
 
 #[derive(Debug)]
@@ -50,11 +77,11 @@ pub(crate) enum ZoneType {
 impl ZoneType {
     pub(crate) fn name(&self) -> &str {
         match self {
-            ZoneType::Battlefield => "battlefield",
-            ZoneType::Deck => "deck",
-            ZoneType::Exile => "exile",
-            ZoneType::Graveyard => "graveyard",
-            ZoneType::Hand => "hand",
+            Self::Battlefield => "battlefield",
+            Self::Deck => "deck",
+            Self::Exile => "exile",
+            Self::Graveyard => "graveyard",
+            Self::Hand => "hand",
         }
     }
 

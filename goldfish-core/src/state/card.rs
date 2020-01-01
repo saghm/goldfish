@@ -24,7 +24,7 @@ impl CardType {
             "land" => Self::Land,
             "planeswalker" => Self::Planeswalker,
             "sorcery" => Self::Sorcery,
-            other => bail!("invalid card type: {}", s),
+            _ => bail!("invalid card type: {}", s),
         };
 
         Ok(card_type)
