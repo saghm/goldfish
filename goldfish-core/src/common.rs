@@ -15,6 +15,7 @@ pub(crate) enum Statement {
     Help,
     Inspect(usize),
     Load(String),
+    Mill(usize),
     Move {
         card: Specifier,
         from: ZoneType,

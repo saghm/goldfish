@@ -143,6 +143,14 @@ impl State {
         Ok(())
     }
 
+    pub(crate) fn mill(&mut self, n: usize) -> Result<()> {
+        for _ in 0..n {
+            self.move_card(&Specifier::Index(0), ZoneType::Deck, ZoneType::Graveyard)?;
+        }
+
+        Ok(())
+    }
+
     /// Moves a card from one zone to another.
     pub(crate) fn move_card(
         &mut self,

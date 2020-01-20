@@ -84,6 +84,7 @@ impl Goldfish {
             Statement::Fetch(card_name) => self.state.fetch(&card_name)?,
             Statement::Inspect(count) => self.state.inspect(count),
             Statement::Load(file) => self.load(&file)?,
+            Statement::Mill(count) => self.state.mill(count)?,
             Statement::Move { card, from, to } => self.state.move_card(&card, from, to)?,
             Statement::Play(card) => self.state.play(&card)?,
             Statement::Print(target) => self.state.print(target),

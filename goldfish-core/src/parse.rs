@@ -40,6 +40,7 @@ impl<'a> Input<'a> {
             "help" => self.parse_help()?,
             "inspect" => self.parse_inspect()?,
             "load" => self.parse_load(),
+            "mill" => self.parse_mill()?,
             "move" => self.parse_move()?,
             "play" => self.parse_play()?,
             "print" => self.parse_print()?,
@@ -138,6 +139,22 @@ impl<'a> Input<'a> {
 
     fn parse_load(self) -> Statement {
         Statement::Load(self.parts.join(" "))
+    }
+
+    fn parse_mill(self) -> Result<Statement> {
+        if self.parts.len() != 1 {
+            bail!("`mill` needs a single word count");
+        }
+
+        let count = match self.parts[0].parse() {
+            Ok(count) => count,
+            Err(..) => bail!(
+                "`{}` is not a valid numeric count for `mill`",
+                self.parts[0]
+            ),
+        };
+
+        Ok(Statement::Mill(count))
     }
 
     fn parse_move(mut self) -> Result<Statement> {
