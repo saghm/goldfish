@@ -1,15 +1,16 @@
 mod card;
 
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     fs::File,
     io::{BufRead, BufReader},
 };
 
 use anyhow::{bail, Result};
 use rand::seq::SliceRandom;
+use scryfall::card::Card;
 
-use self::card::{Card, CardType};
+use self::card::CardExt;
 use crate::common::{PrintTarget, Specifier, ZoneType};
 
 #[derive(Debug, Default)]
@@ -56,29 +57,36 @@ impl State {
 
         let mut cards = Vec::new();
 
-        for line in reader.lines() {
+        for (i, line) in reader.lines().enumerate() {
             let original_line = line?;
-            let parts: Vec<_> = original_line.split(':').map(str::trim).collect();
+            let trimmed_line = original_line.trim();
 
-            if parts.is_empty() {
-                continue;
+            let mut parts = trimmed_line.splitn(2, char::is_whitespace);
+
+            let first_part = match parts.next() {
+                Some(s) if s.is_empty() || s.starts_with("//") || s.starts_with("SB:") => continue,
+                Some(s) => s,
+                None => continue,
+            };
+
+            let card_name = match parts.next() {
+                Some(part) => part.trim(),
+                None => bail!("missing card name on line {}", i + 1),
+            };
+
+            let count: usize = match first_part.parse() {
+                Ok(count) => count,
+                Err(..) => bail!("invalid card count for `{}`: {}", card_name, first_part),
+            };
+
+            let card = match Card::named(card_name) {
+                Ok(card) => card,
+                Err(..) => bail!("unable to find card named `{}`", card_name),
+            };
+
+            for _ in 0..count {
+                cards.push(card.clone());
             }
-
-            if parts.len() > 2 {
-                bail!(
-                    "expected line in the form of 'Opt: instant', but got '{}'",
-                    original_line
-                );
-            }
-
-            let types: Result<_> = parts[1]
-                .split(',')
-                .map(|s| CardType::parse(s.trim()))
-                .collect();
-
-            let card = Card::new(parts[0], types?);
-
-            cards.push(card);
         }
 
         let mut zones = HashMap::new();
@@ -166,10 +174,10 @@ impl State {
         let from_zone = self.get_zone(from);
         let card = from_zone.remove_card(card)?;
 
-        if to == ZoneType::Battlefield && !card.types().iter().any(CardType::is_permanent) {
+        if to == ZoneType::Battlefield && !card.is_permanent() {
             bail!(
                 "cannot move {} to the battlefield because it isn't a permanent",
-                card.name()
+                card.name
             );
         }
 
@@ -227,7 +235,7 @@ impl State {
         println!("cards on top of deck:");
 
         for i in 0..std::cmp::min(n, deck.cards.len()) {
-            println!("    {}) {}", i, deck.cards[i].name());
+            println!("    {}) {}", i, deck.cards[i].name);
         }
 
         println!();
@@ -246,9 +254,9 @@ impl State {
         }
 
         battlefield.cards.sort_by_key(|card| {
-            if card.types().contains(&CardType::Land) {
+            if card.is_land() {
                 3
-            } else if card.types().contains(&CardType::Creature) {
+            } else if card.is_creature() {
                 1
             } else {
                 2
@@ -288,7 +296,7 @@ impl State {
         println!("cards in {}:", location.name());
 
         for i in 0..zone.cards.len() {
-            println!("    {}) {}", i, zone.cards[i].name());
+            println!("    {}) {}", i, zone.cards[i].name);
         }
 
         println!();
@@ -306,17 +314,14 @@ impl State {
     fn print_battlefield(&mut self) {
         self.sort_battlefield();
 
-        let mut count = self.print_battlefield_line("creatures", 0, |card_types| {
-            card_types.contains(&CardType::Creature)
+        let mut count = self
+            .print_battlefield_line("creatures", 0, |card| card.is_creature() && !card.is_land());
+
+        count += self.print_battlefield_line("permanents", count, |card| {
+            card.is_permanent() && !card.is_land()
         });
 
-        count += self.print_battlefield_line("permanents", count, |card_types| {
-            card_types.iter().any(CardType::is_permanent) && !card_types.contains(&CardType::Land)
-        });
-
-        self.print_battlefield_line("lands", count, |card_types| {
-            card_types.contains(&CardType::Land)
-        });
+        self.print_battlefield_line("lands", count, |card| card.is_land());
 
         println!();
     }
@@ -325,7 +330,7 @@ impl State {
         &self,
         line_name: &str,
         previous_count: usize,
-        filter: impl Fn(&HashSet<CardType>) -> bool,
+        filter: impl Fn(&Card) -> bool,
     ) -> usize {
         let battlefield = match self.zones.get(&ZoneType::Battlefield) {
             Some(zone) => zone,
@@ -335,7 +340,7 @@ impl State {
         let mut current_count = 0;
 
         while previous_count + current_count < battlefield.cards.len()
-            && filter(battlefield.cards[previous_count + current_count].types())
+            && filter(&battlefield.cards[previous_count + current_count])
         {
             if current_count == 0 {
                 print!("    {}: ", line_name);
@@ -346,7 +351,7 @@ impl State {
             print!(
                 "{}) {}",
                 previous_count + current_count,
-                battlefield.cards[previous_count + current_count].name()
+                battlefield.cards[previous_count + current_count].name
             );
             current_count += 1;
         }
@@ -379,7 +384,7 @@ impl State {
                 print!("  ");
             }
 
-            print!("{}) {}", i, card.name());
+            print!("{}) {}", i, card.name);
             first = false;
         }
 

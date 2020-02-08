@@ -1,69 +1,52 @@
-use std::collections::HashSet;
+use scryfall::card::Card;
 
-use anyhow::{bail, Result};
-use getset::Getters;
+const PERMANENT_TYPES: [&str; 5] = [
+    "artifact",
+    "creature",
+    "enchantment",
+    "land",
+    "planeswalker",
+];
 
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub(super) enum CardType {
-    Artifact,
-    Creature,
-    Enchantment,
-    Instant,
-    Land,
-    Planeswalker,
-    Sorcery,
+pub(super) trait CardExt {
+    fn is_creature(&self) -> bool;
+
+    fn is_land(&self) -> bool;
+
+    fn is_named(&self, name: &str) -> bool;
+
+    fn is_permanent(&self) -> bool;
 }
 
-impl CardType {
-    pub(super) fn parse(s: &str) -> Result<Self> {
-        let card_type = match s.trim().to_lowercase().as_str() {
-            "artifact" => Self::Artifact,
-            "creature" => Self::Creature,
-            "enchantment" => Self::Enchantment,
-            "instant" => Self::Instant,
-            "land" => Self::Land,
-            "planeswalker" => Self::Planeswalker,
-            "sorcery" => Self::Sorcery,
-            _ => bail!("invalid card type: {}", s),
-        };
-
-        Ok(card_type)
+impl CardExt for Card {
+    fn is_creature(&self) -> bool {
+        // All cards in Scryfall seem to have a type line, so we just unwrap it.
+        self.type_line
+            .as_ref()
+            .unwrap()
+            .to_lowercase()
+            .contains("creature")
     }
 
-    pub(super) fn is_permanent(&self) -> bool {
-        match self {
-            CardType::Artifact
-            | CardType::Creature
-            | CardType::Enchantment
-            | CardType::Land
-            | CardType::Planeswalker => true,
-            CardType::Instant | CardType::Sorcery => false,
-        }
-    }
-}
-
-#[derive(Debug, Getters)]
-pub(super) struct Card {
-    #[get = "pub(super)"]
-    types: HashSet<CardType>,
-
-    #[get = "pub(super)"]
-    name: String,
-}
-
-impl Card {
-    pub(super) fn new(name: &str, types: HashSet<CardType>) -> Self {
-        Self {
-            name: name.to_string(),
-            types,
-        }
+    fn is_land(&self) -> bool {
+        // All cards in Scryfall seem to have a type line, so we just unwrap it.
+        self.type_line
+            .as_ref()
+            .unwrap()
+            .to_lowercase()
+            .contains("land")
     }
 
-    pub(super) fn is_named(&self, name: &str) -> bool {
+    fn is_named(&self, name: &str) -> bool {
         self.name.trim().to_lowercase() == name.trim().to_lowercase()
     }
 
-    pub(super) fn is_permanent(&self) -> bool {
-        self.types.iter().any(|card_type| card_type.is_permanent())
+    fn is_permanent(&self) -> bool {
+        // All cards in Scryfall seem to have a type line, so we just unwrap it.
+        let types = self.type_line.as_ref().unwrap().to_lowercase();
+
+        PERMANENT_TYPES
+            .iter()
+            .any(|card_type| types.contains(card_type))
     }
 }
