@@ -2,16 +2,24 @@ mod card;
 
 use std::{
     collections::HashMap,
-    fs::File,
+    fs::{File, OpenOptions},
     io::{BufRead, BufReader},
+    path::PathBuf,
 };
 
 use anyhow::{bail, Result};
+use lazy_static::lazy_static;
 use rand::seq::SliceRandom;
 use scryfall::card::Card;
 
 use self::card::CardExt;
 use crate::common::{PrintTarget, Specifier, ZoneType};
+
+lazy_static! {
+    static ref GOLDFISH_DIR: Option<PathBuf> = dirs::home_dir().map(|path| path.join(".goldfish"));
+    static ref GOLDFISH_CACHE_DIR: Option<PathBuf> =
+        GOLDFISH_DIR.as_ref().map(|path| path.join("cache"));
+}
 
 #[derive(Debug, Default)]
 struct Zone {
@@ -69,20 +77,27 @@ impl State {
                 None => continue,
             };
 
-            let card_name = match parts.next() {
+            let mut card_name = match parts.next() {
                 Some(part) => part.trim(),
                 None => bail!("missing card name on line {}", i + 1),
             };
+
+            if card_name.starts_with('[') {
+                if let Some(end_of_set) = card_name.find(']') {
+                    if let Some(first_non_space_after_set) =
+                        card_name[end_of_set + 1..].find(|c: char| !c.is_whitespace())
+                    {
+                        card_name = &card_name[end_of_set + 1 + first_non_space_after_set..];
+                    }
+                }
+            }
 
             let count: usize = match first_part.parse() {
                 Ok(count) => count,
                 Err(..) => bail!("invalid card count for `{}`: {}", card_name, first_part),
             };
 
-            let card = match Card::named(card_name) {
-                Ok(card) => card,
-                Err(..) => bail!("unable to find card named `{}`", card_name),
-            };
+            let card = get_card_and_cache(card_name)?;
 
             for _ in 0..count {
                 cards.push(card.clone());
@@ -399,4 +414,64 @@ impl State {
             .unwrap_or(0);
         println!("{}: [{} cards]", zone.name(), count)
     }
+}
+
+fn normalize_card_name(name: &str) -> String {
+    let lowercase_name = name.to_lowercase();
+    let parts: Vec<_> = lowercase_name.split_whitespace().collect();
+    let mut file_name = parts.join("_");
+    file_name.push_str(".json");
+
+    file_name
+}
+
+fn card_path_from_name(name: &str) -> Option<PathBuf> {
+    GOLDFISH_CACHE_DIR
+        .as_ref()?
+        .join(name.chars().next()?.to_string().to_lowercase())
+        .join(normalize_card_name(name))
+        .into()
+}
+
+fn lookup_card_in_cache(name: &str) -> Option<Card> {
+    let card_path = card_path_from_name(name)?;
+
+    if !card_path.exists() {
+        return None;
+    }
+
+    let file = File::open(card_path).ok()?;
+    serde_json::from_reader(file).ok()
+}
+
+fn cache_card(card: &Card) -> Option<()> {
+    let path = card_path_from_name(&card.name)?;
+
+    std::fs::create_dir_all(path.parent()?).ok()?;
+
+    let file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(path)
+        .ok()?;
+
+    serde_json::to_writer_pretty(file, card).ok()?;
+
+    None
+}
+
+fn get_card_and_cache(name: &str) -> Result<Card> {
+    if let Some(card) = lookup_card_in_cache(name) {
+        return Ok(card);
+    }
+
+    let card = match Card::named(name) {
+        Ok(card) => card,
+        Err(..) => bail!("card named `{}` doesn't exist", name),
+    };
+
+    cache_card(&card);
+
+    Ok(card)
 }
